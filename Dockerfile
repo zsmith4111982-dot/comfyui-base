@@ -54,8 +54,20 @@ RUN python3.12 -m pip install --no-cache-dir \
     torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 
 WORKDIR /tmp/build/ComfyUI
-RUN python3.12 -m pip install --no-cache-dir -r requirements.txt && \
-    python3.12 -m pip install --no-cache-dir GitPython opencv-python
+
+# Install numpy first with your specific version before requirements.txt
+# This ensures your version takes precedence
+RUN python3.12 -m pip install --no-cache-dir numpy==1.26.4
+
+# Install ComfyUI requirements (this may try to upgrade numpy, but we'll fix it after)
+RUN python3.12 -m pip install --no-cache-dir -r requirements.txt
+
+# Install opencv-python with your specific version
+# Note: opencv-python==4.10.0.84 is the full version number for 4.10.0
+RUN python3.12 -m pip install --no-cache-dir opencv-python==4.10.0.84
+
+# Install GitPython (already in requirements but ensuring it's there)
+RUN python3.12 -m pip install --no-cache-dir GitPython
 
 # Install custom node dependencies
 WORKDIR /tmp/build/ComfyUI/custom_nodes
@@ -65,6 +77,23 @@ RUN for node_dir in */; do \
             python3.12 -m pip install --no-cache-dir -r "$node_dir/requirements.txt" || true; \
         fi; \
     done
+
+# Install your custom dependencies
+# Force reinstall numpy and opencv to ensure correct versions after custom nodes
+RUN python3.12 -m pip install --no-cache-dir --force-reinstall --no-deps \
+    numpy==1.26.4 \
+    opencv-python==4.10.0.84
+
+# Install mediapipe and sageattention
+RUN python3.12 -m pip install --no-cache-dir \
+    mediapipe==0.10.18 \
+    sageattention
+
+# Verify installations
+RUN python3.12 -c "import numpy; print(f'NumPy: {numpy.__version__}')" && \
+    python3.12 -c "import cv2; print(f'OpenCV: {cv2.__version__}')" && \
+    python3.12 -c "import mediapipe; print(f'MediaPipe: {mediapipe.__version__}')" && \
+    python3.12 -c "import sageattention; print('SageAttention installed successfully')"
 
 # ============================================================================
 # Stage 2: Runtime - Clean image with pre-installed packages
