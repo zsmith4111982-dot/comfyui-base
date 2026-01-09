@@ -89,12 +89,6 @@ RUN python3.12 -m pip install --no-cache-dir \
     mediapipe==0.10.18 \
     sageattention
 
-# Verify installations
-RUN python3.12 -c "import numpy; print(f'NumPy: {numpy.__version__}')" && \
-    python3.12 -c "import cv2; print(f'OpenCV: {cv2.__version__}')" && \
-    python3.12 -c "import mediapipe; print(f'MediaPipe: {mediapipe.__version__}')" && \
-    python3.12 -c "import sageattention; print('SageAttention installed successfully')"
-
 # ============================================================================
 # Stage 2: Runtime - Clean image with pre-installed packages
 # ============================================================================
