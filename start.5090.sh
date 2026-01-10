@@ -2,13 +2,25 @@
 set -e  # Exit the script if any statement returns a non-true return value
 
 COMFYUI_DIR="/workspace/runpod-slim/ComfyUI"
-VENV_DIR="$COMFYUI_DIR/.venv-cu128"
+VENV_DIR="$COMFYUI_DIR/.venv"
 FILEBROWSER_CONFIG="/root/.config/filebrowser/config.json"
 DB_FILE="/workspace/runpod-slim/filebrowser.db"
 
 # ---------------------------------------------------------------------------- #
 #                          Function Definitions                                  #
 # ---------------------------------------------------------------------------- #
+
+# Enforce your custom package versions
+enforce_package_versions() {
+    echo "Enforcing specific package versions..."
+    pip install --no-cache-dir --force-reinstall --no-deps \
+        numpy==1.26.4 \
+        opencv-python==4.10.0.84
+    pip install --no-cache-dir \
+        mediapipe==0.10.18 \
+        sageattention
+    echo "Package versions enforced"
+}
 
 # Setup SSH with optional key or random password
 setup_ssh() {
@@ -177,7 +189,7 @@ if [ ! -d "$COMFYUI_DIR" ] || [ ! -d "$VENV_DIR" ]; then
     # Create and setup virtual environment if not present
     if [ ! -d "$VENV_DIR" ]; then
         cd $COMFYUI_DIR
-        # Create venv with access to system packages (torch cu128, numpy, etc. pre-installed in image)
+        # Create venv with access to system packages (torch, numpy, etc. pre-installed in image)
         python3.12 -m venv --system-site-packages $VENV_DIR
         source $VENV_DIR/bin/activate
 
@@ -185,7 +197,7 @@ if [ ! -d "$COMFYUI_DIR" ] || [ ! -d "$VENV_DIR" ]; then
         python -m ensurepip --upgrade
         python -m pip install --upgrade pip
 
-        echo "Base packages (torch cu128, numpy, etc.) available from system site-packages"
+        echo "Base packages (torch, numpy, etc.) available from system site-packages"
         echo "Installing custom node dependencies..."
 
         # Install dependencies for all custom nodes
@@ -214,6 +226,9 @@ if [ ! -d "$COMFYUI_DIR" ] || [ ! -d "$VENV_DIR" ]; then
                 fi
             fi
         done
+        
+        # Enforce package versions after installing custom nodes
+        enforce_package_versions
     fi
 else
     # Just activate the existing venv
@@ -231,7 +246,7 @@ else
             # Check for requirements.txt
             if [ -f "requirements.txt" ]; then
                 echo "Installing requirements.txt for $node_dir"
-                uv pip install --no-cache -r requirements.txt
+                pip install --no-cache-dir -r requirements.txt
             fi
             
             # Check for install.py
@@ -243,10 +258,13 @@ else
             # Check for setup.py
             if [ -f "setup.py" ]; then
                 echo "Running setup.py for $node_dir"
-                uv pip install --no-cache -e .
+                pip install --no-cache-dir -e .
             fi
         fi
     done
+    
+    # Enforce package versions after checking custom nodes
+    enforce_package_versions
 fi
 
 # Start ComfyUI with custom arguments if provided
